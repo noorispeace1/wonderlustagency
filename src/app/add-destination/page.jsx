@@ -40,7 +40,7 @@ const AddDestinationPage = () => {
         }
 
         try {
-            const res = await fetch('${process.env.NEXT_PUBLIC_SERVER_URL}/destination', {
+            const res = await fetch('${process.env.NEXT_PUBLIC_SERVER_URL}/destinations', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

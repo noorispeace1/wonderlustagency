@@ -10,7 +10,7 @@ import {
   HiOutlineShieldCheck, 
   HiOutlineLocationMarker, 
   HiArrowRight 
-} from "react-icons/hi"; // React Icons (hi handles)
+} from "react-icons/hi";
 
 const BookingCard = ({ destination }) => {
   const { data: session } = authClient.useSession();
@@ -22,12 +22,30 @@ const BookingCard = ({ destination }) => {
   const { price, _id, destinationName, imageUrl, country } = destination;
 
   const handleBooking = async () => {
+    if (!user) {
+      toast.error("Please log in to book a trip!");
+      return;
+    }
+
     if (!departureDate) {
       toast.error("Please select a travel date!");
       return;
     }
 
     setIsSubmitting(true);
+
+    // HeroUI uses Calendar Date models; safely parse them into a standardized Native JS Date object
+    let calculatedDate;
+    try {
+      if (departureDate && typeof departureDate.toDate === "function") {
+        calculatedDate = departureDate.toDate("UTC"); 
+      } else {
+        calculatedDate = new Date(departureDate);
+      }
+    } catch (e) {
+      calculatedDate = new Date();
+    }
+
     const bookingData = {
       userId: user?.id,
       userImage: user?.image,
@@ -37,24 +55,31 @@ const BookingCard = ({ destination }) => {
       price,
       imageUrl,
       country,
-      departureDate: new Date(departureDate),
+      departureDate: calculatedDate,
     };
-const {data:tokenData} = await authClient.token()
-console.log(tokenData);
+
     try {
+      const { data: tokenData } = await authClient.token();
+      
       const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/booking`, {
         method: "POST",
-         
-        headers: { "content-type": "application/json" },
-        authorization: `Bearer ${tokenData?.token}`,
+        // FIX: The authorization property MUST live inside your headers block
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${tokenData?.token || ""}`
+        },
         body: JSON.stringify(bookingData),
       });
 
       if (res.ok) {
         toast.success("Spot reserved successfully!");
         router.push("/my-bookings");
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        toast.error(errData?.message || "Booking rejected by server.");
       }
     } catch (err) {
+      console.error("Booking API Client Error:", err);
       toast.error("Booking failed. Try again.");
     } finally {
       setIsSubmitting(false);
@@ -66,7 +91,7 @@ console.log(tokenData);
       {/* Top Banner Section */}
       <div className="bg-gradient-to-br from-cyan-500 to-blue-600 p-8 text-white">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 mb-1">
-       Best package Deal
+          Best package Deal
         </p>
         <div className="flex items-baseline gap-1">
           <span className="text-2xl font-light">$</span>
